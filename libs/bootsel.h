@@ -1,0 +1,1 @@
+void bootsel_init();
