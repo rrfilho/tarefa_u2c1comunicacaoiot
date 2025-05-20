@@ -1,4 +1,4 @@
 typedef void (*request_handler)(char* route);
-typedef float (*temperature_reader)();
+typedef char* (*html_content)();
 
-int webserver_create(int port, request_handler handler, temperature_reader reader);
+int webserver_create(int port, request_handler handler, html_content content);

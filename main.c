@@ -1,60 +1,126 @@
 #include <stdio.h>
 #include <string.h>
 #include "pico/stdlib.h"
-#include "libs/bootsel.h"
+#include "libs/buttons.h"
 #include "libs/leds.h"
-#include "libs/temperature_sensor.h"
 #include "libs/wifi.h"
 #include "libs/display.h"
+#include "libs/led_matrix.h"
+#include "libs/buzzer.h"
 #include "libs/webserver.h"
+#include "html.h"
 
-// Credenciais WIFI - Tome cuidado se publicar no github!
+// Credenciais WIFI - Tome cuidado ao publicar no github!
 #define WIFI_SSID ""
 #define WIFI_PASSWORD ""
 
+bool entrance_light = false;
+bool room_light = false;
+bool kitchen_light = false;
+bool bedroom_light = false;
+unsigned int temperature = 20;
+bool alarm = false;
+
+void alarm_turn_on() {
+    alarm = true;
+    buzzer_set(true);
+}
+
 void init() {
     stdio_init_all();
-    bootsel_init();
-    temperature_sensor_init();
+    buttons_init(alarm_turn_on);
     leds_init();
+    led_matrix_init();
+    buzzer_init();
     wifi_init();
     display_init();
 }
 
 void web_request_handler(char *route) {
-    if (strstr(route, "blue_on") != NULL) {
-        leds_set_blue(true);
+    if (strstr(route, "entrance_light") != NULL) {
+        entrance_light = !entrance_light;
+        led_matrix_lights(entrance_light, room_light, kitchen_light, bedroom_light);
         return;
     }
-    if (strstr(route, "blue_off") != NULL) {
-        leds_set_blue(false);
+    if (strstr(route, "bedroom_light") != NULL) {
+        bedroom_light = !bedroom_light;
+        led_matrix_lights(entrance_light, room_light, kitchen_light, bedroom_light);
         return;
     }
-    if (strstr(route, "green_on") != NULL) {
-        leds_set_green(true);
+    if (strstr(route, "room_light") != NULL) {
+        room_light = !room_light;
+        led_matrix_lights(entrance_light, room_light, kitchen_light, bedroom_light);
         return;
     }
-    if (strstr(route, "green_off") != NULL) {
-        leds_set_green(false);
+    if (strstr(route, "kitchen_light") != NULL) {
+        kitchen_light = !kitchen_light;
+        led_matrix_lights(entrance_light, room_light, kitchen_light, bedroom_light);
         return;
     }
-    if (strstr(route, "red_on") != NULL) {
-        leds_set_red(true);
+    if (strstr(route, "temp_inc") != NULL) {
+        temperature = temperature + 1 > 35 ? temperature : temperature + 1;
+        leds_set_red(temperature);
         return;
     }
-    if (strstr(route, "red_off") != NULL) {
-        leds_set_red(false);
+    if (strstr(route, "temp_dec") != NULL) {
+        temperature = temperature - 1 < 15 ? temperature : temperature - 1;
+        leds_set_red(temperature);
         return;
     }
-    if (strstr(route, "on") != NULL) {
-        wifi_set_led(true);
-        return;
-    }
-    if (strstr(route, "off") != NULL) {
-        wifi_set_led(false);
+    if (strstr(route, "alarm_off") != NULL) {
+        alarm = false;
+        buzzer_set(false);
         return;
     }
 };
+
+char* get_light_class(bool status) {
+    return status ? "on" : "off";
+}
+
+char* get_light_status(bool status) {
+    return status ? "Acesa" : "Apagada";
+} 
+
+char* get_light_action(bool status) {
+    return status ? "Apagar" : "Acender";
+}
+
+char* get_alarm_status() {
+    return alarm ? "Alarme ativo" : "Sem alarme";
+}
+
+char* get_alarm_class() {
+    return alarm ? "off" : "on";
+}
+
+char* get_alarm_button() {
+    return alarm ? "" : "d-none";
+}
+
+char* content() {
+    static char content[3110];
+    snprintf(
+        content, 3110, html, 
+        get_light_class(entrance_light),
+        get_light_status(entrance_light),
+        get_light_action(entrance_light),
+        get_light_class(room_light),
+        get_light_status(room_light),
+        get_light_action(room_light),
+        get_light_class(kitchen_light),
+        get_light_status(kitchen_light),
+        get_light_action(kitchen_light),
+        get_light_class(bedroom_light),
+        get_light_status(bedroom_light),
+        get_light_action(bedroom_light),
+        temperature,
+        get_alarm_class(),
+        get_alarm_status(),
+        get_alarm_button()
+    );
+    return content;
+}
 
 int main() {
     init();
@@ -72,7 +138,7 @@ int main() {
     display_set_second_line_message("Conectado ao Wi-Fi");
     sleep_ms(1000);
     display_set_first_line_message(wifi_ip());
-    if (!webserver_create(80, web_request_handler, temperature_sensor_read)){
+    if (!webserver_create(80, web_request_handler, content)){
         display_set_second_line_message("Falha ao criar servidor web");
     }
     display_set_second_line_message("Serv web criado porta 80");

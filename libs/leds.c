@@ -1,31 +1,23 @@
 #include "leds.h"
-#include <stdbool.h>
 #include "pico/stdlib.h"
+#include "hardware/pwm.h"
 
-#define GREEN_LED_PIN 11
-#define BLUE_LED_PIN 12
-#define RED_LED_PIN 13
-
-static void led_init(int led_pin) {
-    gpio_init(led_pin);
-    gpio_set_dir(led_pin, GPIO_OUT);
-    gpio_put(led_pin, false);
-}
+#define RED_PWM_LED 13
+#define CLOCK_DIVIDER 2.0
+#define WRAP 22
+#define INITIAL 6
+#define SHIFT 14
 
 void leds_init() {
-    led_init(GREEN_LED_PIN);
-    led_init(BLUE_LED_PIN);
-    led_init(RED_LED_PIN);
+    gpio_set_function(RED_PWM_LED, GPIO_FUNC_PWM);
+    unsigned int slice = pwm_gpio_to_slice_num(RED_PWM_LED);
+    pwm_set_clkdiv(slice, CLOCK_DIVIDER);
+    pwm_set_wrap(slice, WRAP);
+    pwm_set_gpio_level(RED_PWM_LED, INITIAL);
+    pwm_set_enabled(slice, true);
 }
 
-void leds_set_red(bool status) {
-    gpio_put(RED_LED_PIN, status);
-}
 
-void leds_set_green(bool status) {
-    gpio_put(GREEN_LED_PIN, status);
-}
-
-void leds_set_blue(bool status) {
-    gpio_put(BLUE_LED_PIN, status);
+void leds_set_red(unsigned int temperature) {
+    pwm_set_gpio_level(RED_PWM_LED, temperature - SHIFT);
 }

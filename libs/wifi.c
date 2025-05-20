@@ -6,7 +6,7 @@
 
 #define WIFI_LED_PIN CYW43_WL_GPIO_LED_PIN
 #define SUCCESS 0
-#define TIMEOUT_WIFI_CONNECTION 20000
+#define TIMEOUT_WIFI_CONNECTION_MS 30000
 
 static int _initialization = -1;
 
@@ -30,7 +30,7 @@ void wifi_set_led(bool status) {
 }
 
 bool wifi_connect_to(char* ssid, char* password) {
-    return cyw43_arch_wifi_connect_timeout_ms(ssid, password, CYW43_AUTH_WPA2_AES_PSK, TIMEOUT_WIFI_CONNECTION);
+    return cyw43_arch_wifi_connect_timeout_ms(ssid, password, CYW43_AUTH_WPA2_AES_PSK, TIMEOUT_WIFI_CONNECTION_MS);
 }
 
 char* wifi_ip() {
